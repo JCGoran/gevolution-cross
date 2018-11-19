@@ -3,17 +3,44 @@
 import numpy as np
 import pandas as pd
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 import os
 import scipy.optimize as opt
 import matplotlib.pyplot as plt
 import time
 import sys
 import scipy.special as spec
+from scipy.special import wofz
 
-def model1(x, b):
+def model_gaussian(x, b):
     """Gaussian"""
     return np.exp(-b*x**2)
+
+def model_tanh(x, a, b):
+    return 1./2*(1 - np.tanh(b*x + a))
+
+def model_gaussian_constant(x, a, b):
+    return (1 + a*x**2)*np.exp(-b*x**2)
+
+def model_lorentzian(x, a):
+    return 1./(1 + (a*x)**2)
+
+def model_voigt_norm(x, alpha, gamma):
+    """
+    Return the Voigt line shape at x with Lorentzian component HWHM gamma
+    and Gaussian component HWHM alpha.
+
+    """
+    sigma = alpha / np.sqrt(2 * np.log(2))
+    return np.real(wofz((x + 1j*gamma)/sigma/np.sqrt(2)))/np.real(wofz((1j*gamma)/sigma/np.sqrt(2)))
+
+
+def model_fermi(x, a, b):
+    """Fermi-like distribution"""
+    return 1./(1 + np.exp(b*x + a))
+
+def model_gaussian_with_constant(x, a, b):
+    return 1. - a*(1. - np.exp(-a*x**2))
 
 def model_quasigaussian(x, a, b):
     """Quasi gaussian model"""
@@ -62,12 +89,12 @@ models = [model3d, model3d2, model3d3, model3d4, model3d5, model3d6]
 
 
 # parameters
-prefix = "daint_2048"
+prefix = "daint_2048_smallbox"
 
 redshifts = np.array([60, 30, 10, 5,3, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.3, 2.2, 2.1, 2, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0])
 
 ngrid = 2048
-Lbox = 1024
+Lbox = 256
 knyq = np.pi * ngrid/Lbox
 bins = 1024
 
@@ -82,6 +109,9 @@ def process_data(prefix):
     except FileNotFoundError:
 
         print("Processed file not found, processing now...")
+
+        df_cross = dict()
+        df_pk = dict()
 
         # reading all the data
         for n1 in range(len(redshifts)):
@@ -223,9 +253,9 @@ def plot_zmean_deltaz(corrcoeffmod, models, params):
             plt.legend()
             plt.grid()
             plt.xscale('log')
-            plt.show()
-            #plt.savefig("%sprocess/plot_deltaz_%.1f_zmean_%.2f.pdf" % (prefix, deltaz, zmean), dpi = 300)
-            #plt.close()
+            #plt.show()
+            plt.savefig("%sprocess/plot_deltaz_%.1f_zmean_%.2f.pdf" % (prefix, deltaz, zmean), dpi = 300)
+            plt.close()
 
             plt.xlabel('k [h/Mpc]')
             plt.ylabel('residual')
@@ -234,9 +264,9 @@ def plot_zmean_deltaz(corrcoeffmod, models, params):
             plt.legend()
             plt.grid()
             plt.xscale('log')
-            plt.show()
-            #plt.savefig("%sprocess/plot_deltaz_%.1f_zmean_%.2f_res.pdf" % (prefix, deltaz, zmean), dpi = 300)
-            #plt.close()
+            #plt.show()
+            plt.savefig("%sprocess/plot_deltaz_%.1f_zmean_%.2f_res.pdf" % (prefix, deltaz, zmean), dpi = 300)
+            plt.close()
 
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -245,6 +275,7 @@ def find_nearest(array, value):
 
 # fit correlation coefficient as a function of wavenumber k for FIXED zmean and deltaz
 def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
+    total_chi2 = 0
     for zmean in np.unique(df.zmean.values):
         # has fixed zmean
         temp = df.loc[df.zmean == zmean]
@@ -257,29 +288,38 @@ def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
                 temp_inner.c.values,\
                 sigma = temp_inner.sigmac.values,\
                 maxfev = 100000\
+                #bounds = ([0, 0],[100, 100])\
             )
+            print(zmean, deltaz, *par)
+            chi2_dof = sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2/(len(temp_inner.index) - len(par))
+            total_chi2 += sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2
+            print(np.sqrt(chi2_dof))
             plt.ylim(ymin = 0.0, ymax = 1.2)
             plt.xlabel('k [h/Mpc]')
             plt.ylabel('corr. coeff.')
-            plt.errorbar(temp_inner['k'].values, temp_inner['c'].values, yerr = temp_inner['sigmac'].values, fmt = 'ko', markersize = 2)
+            #plt.errorbar(temp_inner['k'].values, temp_inner['c'].values, yerr = temp_inner['sigmac'].values, fmt = 'ko', markersize = 2)
+            plt.plot(temp_inner['k'].values, temp_inner['c'].values, 'ko', markersize = 2)
             plt.plot(temp_inner['k'].values, model((temp_inner['k'].values), *par), label = name)
-            plt.title("chi2/dof = %f" % (sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2/(len(temp_inner.index) - len(par))))
+            #plt.title("chi2/dof = %f" % (sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2/(len(temp_inner.index) - len(par))))
+            plt.title("sqrt(chi2/dof) = %e" % np.sqrt(chi2_dof))
             plt.legend()
             plt.grid()
-            plt.xscale('log')
+            #plt.xscale('log')
             #plt.show()
             plt.savefig("%sprocess/%s_plot_deltaz_%.1f_zmean_%.2f.pdf" % (prefix, name, deltaz, zmean), dpi = 300)
             plt.close()
 
+    total_chi2 = np.sqrt(total_chi2/len(df.index))
+    print("total sqrt(chi2/N) = %e" % total_chi2)
 
 
 df = process_data(prefix).dropna()
-df = select_interval(df, zmax=3.0, cmin = 0.05, dropna=True, kmax = knyq/1.1)
+df = select_interval(df, zmax=3.0, dropna=True, kmax = 7.)
 
-plot_uetc_paper(df, prefix)
-with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-    print(fit_data(df, models))
+for i in df.index:
+    #if (df.at[i,"sigmac"] > 0.01):
+    #    df.at[i, "sigmac"] = 0.01
+    df.at[i, "sigmac"] = 1
 
-plot_zmean_deltaz_fit(prefix, df, model_quasigaussian, "quasigaussian")
-sys.exit()
-plot_zmean_deltaz(df, models, fit_data(df, models))
+#plot_zmean_deltaz_fit(prefix, df, model1, "gaussian")
+plot_zmean_deltaz_fit(prefix, df, model_gaussian, "gaussian")
