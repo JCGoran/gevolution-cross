@@ -276,6 +276,13 @@ def find_nearest(array, value):
 # fit correlation coefficient as a function of wavenumber k for FIXED zmean and deltaz
 def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
     total_chi2 = 0
+    all_par = list()
+    all_zmean = list()
+    all_deltaz = list()
+    if (model.__name__ == "model_voigt_norm"):
+        bounds = ([0, 0],[100, 100])
+    else:
+        bounds = (-np.inf, np.inf)
     for zmean in np.unique(df.zmean.values):
         # has fixed zmean
         temp = df.loc[df.zmean == zmean]
@@ -287,16 +294,20 @@ def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
                 (temp_inner.k.values),\
                 temp_inner.c.values,\
                 sigma = temp_inner.sigmac.values,\
-                maxfev = 100000\
-                #bounds = ([0, 0],[100, 100])\
+                maxfev = 100000,\
+                bounds = bounds\
             )
-            print(zmean, deltaz, *par)
+            all_par.append(par)
+            all_zmean.append(zmean)
+            all_deltaz.append(deltaz)
             chi2_dof = sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2/(len(temp_inner.index) - len(par))
             total_chi2 += sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2
-            print(np.sqrt(chi2_dof))
+            print(zmean, deltaz, np.sqrt(chi2_dof), *par)
+
             plt.ylim(ymin = 0.0, ymax = 1.2)
             plt.xlabel('k [h/Mpc]')
             plt.ylabel('corr. coeff.')
+
             #plt.errorbar(temp_inner['k'].values, temp_inner['c'].values, yerr = temp_inner['sigmac'].values, fmt = 'ko', markersize = 2)
             plt.plot(temp_inner['k'].values, temp_inner['c'].values, 'ko', markersize = 2)
             plt.plot(temp_inner['k'].values, model((temp_inner['k'].values), *par), label = name)
@@ -308,6 +319,46 @@ def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
             #plt.show()
             plt.savefig("%sprocess/%s_plot_deltaz_%.1f_zmean_%.2f.pdf" % (prefix, name, deltaz, zmean), dpi = 300)
             plt.close()
+
+    df_par = pd.DataFrame({'zmean':all_zmean, 'deltaz':all_deltaz})#, 'par':all_par})
+    for i in df_par.index:
+        for j in range(len(all_par[i])):
+            df_par.at[i, 'par%d' % (j + 1)] = all_par[i][j]
+    #print(df_par)
+
+    # fix zmean, plot parameters as function of deltaz
+    for zmean in np.unique(df_par.zmean):
+        temp = df_par.loc[df_par.zmean == zmean]
+        name_par = [col for col in df_par.columns if 'par' in col]
+
+        plt.xlabel('deltaz')
+        plt.ylabel('par_value')
+
+        if (len(temp.index) > 4):
+            for parname in name_par:
+                plt.plot(temp.deltaz, temp[parname].values, 'o', label=parname)
+            plt.legend()
+            plt.grid()
+            plt.savefig("%sprocess/%s_plot_params_zmean_%.2f.pdf" % (prefix, name, zmean), dpi = 300)
+
+        plt.close()
+
+    # fix deltaz, plot parameters as function of zmean
+    for deltaz in np.unique(df_par.deltaz):
+        temp = df_par.loc[df_par.deltaz == deltaz]
+        name_par = [col for col in df_par.columns if 'par' in col]
+
+        plt.xlabel('zmean')
+        plt.ylabel('par_value')
+
+        if (len(temp.index) > 4):
+            for parname in name_par:
+                plt.plot(temp.zmean, temp[parname].values, 'o', label=parname)
+            plt.legend()
+            plt.grid()
+            plt.savefig("%sprocess/%s_plot_params_deltaz_%.2f.pdf" % (prefix, name, deltaz), dpi = 300)
+
+        plt.close()
 
     total_chi2 = np.sqrt(total_chi2/len(df.index))
     print("total sqrt(chi2/N) = %e" % total_chi2)
