@@ -11,6 +11,7 @@ import time
 import sys
 import scipy.special as spec
 from scipy.special import wofz
+from matplotlib.backends.backend_pdf import PdfPages
 
 def model_gaussian(x, b):
     """Gaussian"""
@@ -31,7 +32,8 @@ def model_voigt_norm(x, alpha, gamma):
     and Gaussian component HWHM alpha.
 
     """
-    sigma = alpha / np.sqrt(2 * np.log(2))
+    sigma = 1/np.sqrt(2*alpha)
+    #sigma = alpha / np.sqrt(2 * np.log(2))
     return np.real(wofz((x + 1j*gamma)/sigma/np.sqrt(2)))/np.real(wofz((1j*gamma)/sigma/np.sqrt(2)))
 
 
@@ -304,21 +306,59 @@ def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
             total_chi2 += sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2
             print(zmean, deltaz, np.sqrt(chi2_dof), *par)
 
-            plt.ylim(ymin = 0.0, ymax = 1.2)
-            plt.xlabel('k [h/Mpc]')
-            plt.ylabel('corr. coeff.')
+            with PdfPages("%sprocess/%s_plot_deltaz_%.1f_zmean_%.2f.pdf" % (prefix, name, deltaz, zmean)) as pdf:
+                # plain
+                plt.ylim(ymin = 0.0, ymax = 1.2)
+                plt.xlabel('k [h/Mpc]')
+                plt.ylabel('corr. coeff.')
 
-            #plt.errorbar(temp_inner['k'].values, temp_inner['c'].values, yerr = temp_inner['sigmac'].values, fmt = 'ko', markersize = 2)
-            plt.plot(temp_inner['k'].values, temp_inner['c'].values, 'ko', markersize = 2)
-            plt.plot(temp_inner['k'].values, model((temp_inner['k'].values), *par), label = name)
-            #plt.title("chi2/dof = %f" % (sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2/(len(temp_inner.index) - len(par))))
-            plt.title("sqrt(chi2/dof) = %e" % np.sqrt(chi2_dof))
-            plt.legend()
-            plt.grid()
-            #plt.xscale('log')
-            #plt.show()
-            plt.savefig("%sprocess/%s_plot_deltaz_%.1f_zmean_%.2f.pdf" % (prefix, name, deltaz, zmean), dpi = 300)
-            plt.close()
+                plt.plot(temp_inner['k'].values, temp_inner['c'].values, 'ko', markersize = 2)
+                plt.plot(temp_inner['k'].values, model((temp_inner['k'].values), *par), label = name)
+                plt.title("sqrt(chi2/dof) = %e" % np.sqrt(chi2_dof))
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
+
+                # semilogy
+                plt.ylim(ymin = 1e-6, ymax = 1.2)
+                plt.xlabel('k [h/Mpc]')
+                plt.ylabel('corr. coeff.')
+
+                plt.semilogy(temp_inner['k'].values, temp_inner['c'].values, 'ko', markersize = 2)
+                plt.semilogy(temp_inner['k'].values, model((temp_inner['k'].values), *par), label = name)
+                plt.title("sqrt(chi2/dof) = %e" % np.sqrt(chi2_dof))
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
+
+                # semilogx
+                plt.ylim(ymax = 1.2)
+                plt.xlabel('k [h/Mpc]')
+                plt.ylabel('corr. coeff.')
+
+                plt.semilogx(temp_inner['k'].values, temp_inner['c'].values, 'ko', markersize = 2)
+                plt.semilogx(temp_inner['k'].values, model((temp_inner['k'].values), *par), label = name)
+                plt.title("sqrt(chi2/dof) = %e" % np.sqrt(chi2_dof))
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
+
+                # loglog
+                plt.ylim(ymin = 1e-6, ymax = 1.2)
+                plt.xlabel('k [h/Mpc]')
+                plt.ylabel('corr. coeff.')
+
+                plt.loglog(temp_inner['k'].values, temp_inner['c'].values, 'ko', markersize = 2)
+                plt.loglog(temp_inner['k'].values, model((temp_inner['k'].values), *par), label = name)
+                plt.title("sqrt(chi2/dof) = %e" % np.sqrt(chi2_dof))
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
+
 
     df_par = pd.DataFrame({'zmean':all_zmean, 'deltaz':all_deltaz})#, 'par':all_par})
     for i in df_par.index:
@@ -331,34 +371,78 @@ def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
         temp = df_par.loc[df_par.zmean == zmean]
         name_par = [col for col in df_par.columns if 'par' in col]
 
-        plt.xlabel('deltaz')
-        plt.ylabel('par_value')
-
         if (len(temp.index) > 4):
-            for parname in name_par:
-                plt.plot(temp.deltaz, temp[parname].values, 'o', label=parname)
-            plt.legend()
-            plt.grid()
-            plt.savefig("%sprocess/%s_plot_params_zmean_%.2f.pdf" % (prefix, name, zmean), dpi = 300)
+            with PdfPages("%sprocess/%s_plot_params_zmean_%.2f.pdf" % (prefix, name, zmean)) as pdf:
 
-        plt.close()
+                # regular
+                for parname in name_par:
+                    plt.plot(temp.deltaz, temp[parname].values, 'o', label=parname)
+                plt.xlabel('deltaz')
+                plt.ylabel('par_value')
+                plt.ylim(ymin=0.0)
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
+
+                # semilogy
+                for parname in name_par:
+                    plt.semilogy(temp.deltaz, temp[parname].values, 'o', label=parname)
+                plt.xlabel('deltaz')
+                plt.ylabel('par_value')
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
+
+                # loglog
+                for parname in name_par:
+                    plt.loglog(temp.deltaz, temp[parname].values, 'o', label=parname)
+                plt.xlabel('deltaz')
+                plt.ylabel('par_value')
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
 
     # fix deltaz, plot parameters as function of zmean
     for deltaz in np.unique(df_par.deltaz):
         temp = df_par.loc[df_par.deltaz == deltaz]
         name_par = [col for col in df_par.columns if 'par' in col]
 
-        plt.xlabel('zmean')
-        plt.ylabel('par_value')
-
         if (len(temp.index) > 4):
-            for parname in name_par:
-                plt.plot(temp.zmean, temp[parname].values, 'o', label=parname)
-            plt.legend()
-            plt.grid()
-            plt.savefig("%sprocess/%s_plot_params_deltaz_%.2f.pdf" % (prefix, name, deltaz), dpi = 300)
+            with PdfPages("%sprocess/%s_plot_params_deltaz_%.2f.pdf" % (prefix, name, deltaz)) as pdf:
 
-        plt.close()
+                # regular
+                for parname in name_par:
+                    plt.plot(temp.zmean, temp[parname].values, 'o', label=parname)
+                plt.xlabel('zmean')
+                plt.ylabel('par_value')
+                plt.ylim(ymin=0.0)
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
+
+                # semilogy
+                for parname in name_par:
+                    plt.semilogy(temp.zmean, temp[parname].values, 'o', label=parname)
+                plt.xlabel('zmean')
+                plt.ylabel('par_value')
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
+
+                # loglog
+                for parname in name_par:
+                    plt.loglog(temp.zmean, temp[parname].values, 'o', label=parname)
+                plt.xlabel('zmean')
+                plt.ylabel('par_value')
+                plt.legend()
+                plt.grid()
+                pdf.savefig()
+                plt.close()
 
     total_chi2 = np.sqrt(total_chi2/len(df.index))
     print("total sqrt(chi2/N) = %e" % total_chi2)
