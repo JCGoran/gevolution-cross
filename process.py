@@ -87,18 +87,6 @@ def model3d6(x, a, b):
     (k, zmean, deltaz) = x
     return np.ravel(np.exp(-a * k**2 *deltaz**2 / ((1 + zmean + deltaz/2.) * (1 + zmean - deltaz/2.))**b))
 
-models = [model3d, model3d2, model3d3, model3d4, model3d5, model3d6]
-
-
-# parameters
-prefix = "daint_2048_smallbox"
-
-redshifts = np.array([60, 30, 10, 5,3, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.3, 2.2, 2.1, 2, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0])
-
-ngrid = 2048
-Lbox = 256
-knyq = np.pi * ngrid/Lbox
-bins = 1024
 
 def process_data(prefix):
 
@@ -446,6 +434,16 @@ def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
 
     total_chi2 = np.sqrt(total_chi2/len(df.index))
     print("total sqrt(chi2/N) = %e" % total_chi2)
+
+# parameters
+prefix = "daint_2048_smallbox"
+
+redshifts = np.array([60, 30, 10, 5,3, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.3, 2.2, 2.1, 2, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0])
+
+ngrid = 2048
+Lbox = 256
+knyq = np.pi * ngrid/Lbox
+bins = 1024
 
 
 df = process_data(prefix).dropna()
