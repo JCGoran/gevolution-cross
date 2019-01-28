@@ -224,7 +224,7 @@ def fit_data(corrcoeffmod, models):
         df.at[i, "sigma"] = np.sqrt(np.diag(cov))
         df.at[i, "model"] = models[i].__name__
         df.at[i, "chi2"] = sum(\
-                (corrcoeffmod['c'].values - models[i]((corrcoeffmod['k'].values, corrcoeffmod['zmean'].values, corrcoeffmod['deltaz'].values), *params)) / corrcoeffmod['sigmac'].values ** 2\
+                ((corrcoeffmod['c'].values - models[i]((corrcoeffmod['k'].values, corrcoeffmod['zmean'].values, corrcoeffmod['deltaz'].values), *params)) / corrcoeffmod['sigmac'].values) ** 2\
             )/(len(corrcoeffmod.index) - len(params))
 
     return df
@@ -290,8 +290,8 @@ def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
             all_par.append(par)
             all_zmean.append(zmean)
             all_deltaz.append(deltaz)
-            chi2_dof = sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2/(len(temp_inner.index) - len(par))
-            total_chi2 += sum((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2
+            chi2_dof = sum(((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2)/(len(temp_inner.index) - len(par))
+            total_chi2 += sum(((temp_inner.c.values - model((temp_inner.k.values), *par)) / temp_inner.sigmac.values) ** 2)
             print(zmean, deltaz, np.sqrt(chi2_dof), *par)
 
             with PdfPages("%sprocess/%s_plot_deltaz_%.1f_zmean_%.2f.pdf" % (prefix, name, deltaz, zmean)) as pdf:
