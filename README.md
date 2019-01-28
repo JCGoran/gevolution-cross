@@ -1,5 +1,6 @@
 # TODO list
 
+- [ ] find a good estimator for the error of the fit (chi squared? Something else?)
 - [ ] find a good fit for the correlation coefficient for all redshift pairs
 - [ ] check dependence of fit on initial seed (*optional, probably minimal as we're interested mostly in small scales*)
 - [ ] check dependence of fit on cosmological parameters
