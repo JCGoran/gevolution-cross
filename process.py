@@ -223,7 +223,9 @@ def fit_data(corrcoeffmod, models):
         df.at[i, "cov"] = cov
         df.at[i, "sigma"] = np.sqrt(np.diag(cov))
         df.at[i, "model"] = models[i].__name__
-        df.at[i, "chi2"] = sum((corrcoeffmod['c'].values - models[i]((corrcoeffmod['k'].values, corrcoeffmod['zmean'].values, corrcoeffmod['deltaz'].values), *params)) / corrcoeffmod['sigmac'].values) ** 2/(len(corrcoeffmod.index) - len(params))
+        df.at[i, "chi2"] = sum(\
+                (corrcoeffmod['c'].values - models[i]((corrcoeffmod['k'].values, corrcoeffmod['zmean'].values, corrcoeffmod['deltaz'].values), *params)) / corrcoeffmod['sigmac'].values ** 2\
+            )/(len(corrcoeffmod.index) - len(params))
 
     return df
 
@@ -243,7 +245,6 @@ def plot_zmean_deltaz(corrcoeffmod, models, params):
             plt.legend()
             plt.grid()
             plt.xscale('log')
-            #plt.show()
             plt.savefig("%sprocess/plot_deltaz_%.1f_zmean_%.2f.pdf" % (prefix, deltaz, zmean), dpi = 300)
             plt.close()
 
@@ -254,7 +255,6 @@ def plot_zmean_deltaz(corrcoeffmod, models, params):
             plt.legend()
             plt.grid()
             plt.xscale('log')
-            #plt.show()
             plt.savefig("%sprocess/plot_deltaz_%.1f_zmean_%.2f_res.pdf" % (prefix, deltaz, zmean), dpi = 300)
             plt.close()
 
@@ -348,17 +348,17 @@ def plot_zmean_deltaz_fit(prefix, df, model, name="gaussian"):
                 plt.close()
 
 
-    df_par = pd.DataFrame({'zmean':all_zmean, 'deltaz':all_deltaz})#, 'par':all_par})
+    df_par = pd.DataFrame({'zmean':all_zmean, 'deltaz':all_deltaz})
     for i in df_par.index:
         for j in range(len(all_par[i])):
             df_par.at[i, 'par%d' % (j + 1)] = all_par[i][j]
-    #print(df_par)
 
     # fix zmean, plot parameters as function of deltaz
     for zmean in np.unique(df_par.zmean):
         temp = df_par.loc[df_par.zmean == zmean]
         name_par = [col for col in df_par.columns if 'par' in col]
 
+        # only plot data if there is more than 4 points
         if (len(temp.index) > 4):
             with PdfPages("%sprocess/%s_plot_params_zmean_%.2f.pdf" % (prefix, name, zmean)) as pdf:
 
@@ -449,10 +449,9 @@ bins = 1024
 df = process_data(prefix).dropna()
 df = select_interval(df, zmax=3.0, dropna=True, kmax = 7.)
 
+# power spectrum errors influence the fit significantly!
 for i in df.index:
-    #if (df.at[i,"sigmac"] > 0.01):
-    #    df.at[i, "sigmac"] = 0.01
     df.at[i, "sigmac"] = 1
 
-#plot_zmean_deltaz_fit(prefix, df, model1, "gaussian")
+# plots the data and fit for it
 plot_zmean_deltaz_fit(prefix, df, model_gaussian, "gaussian")
